@@ -1,0 +1,131 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); direction: rtl; }
+  .container { padding: 1rem 0; max-width: 100%; }
+  .header { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; border-bottom: 0.5px solid var(--color-border-tertiary); padding-bottom: 1rem; }
+  .header h2 { font-size: 18px; font-weight: 500; color: var(--color-text-primary); }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; direction: rtl; }
+  .filter-btn { font-size: 13px; padding: 5px 14px; border-radius: 99px; border: 0.5px solid var(--color-border-secondary); background: transparent; cursor: pointer; color: var(--color-text-secondary); transition: all 0.15s; font-family: var(--font-sans); }
+  .filter-btn.active { background: var(--color-background-info); color: var(--color-text-info); border-color: transparent; }
+  .filter-btn:hover:not(.active) { background: var(--color-background-secondary); }
+  .qa-item { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); margin-bottom: 10px; overflow: hidden; transition: border-color 0.15s; }
+  .qa-item:hover { border-color: var(--color-border-secondary); }
+  .qa-question { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; background: var(--color-background-primary); direction: rtl; }
+  .qa-question:hover { background: var(--color-background-secondary); }
+  .q-num { font-size: 12px; font-weight: 500; background: var(--color-background-secondary); border-radius: 99px; padding: 2px 10px; color: var(--color-text-secondary); white-space: nowrap; flex-shrink: 0; }
+  .q-cat { font-size: 11px; padding: 2px 9px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; }
+  .cat-model { background: #EEEDFE; color: #3C3489; }
+  .cat-mediapipe { background: #E1F5EE; color: #085041; }
+  .cat-features { background: #FAECE7; color: #712B13; }
+  .cat-logic { background: #FAEEDA; color: #633806; }
+  .cat-arabic { background: #FBEAF0; color: #72243E; }
+  .cat-general { background: #E6F1FB; color: #0C447C; }
+  .q-text { font-size: 14px; font-weight: 500; color: var(--color-text-primary); flex: 1; text-align: right; }
+  .q-arrow { transition: transform 0.2s; color: var(--color-text-secondary); font-size: 16px; flex-shrink: 0; }
+  .qa-answer { display: none; padding: 14px 16px; border-top: 0.5px solid var(--color-border-tertiary); background: var(--color-background-secondary); direction: rtl; font-size: 13px; line-height: 1.75; color: var(--color-text-primary); }
+  .qa-answer code { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: var(--font-mono); direction: ltr; display: inline-block; }
+  .qa-item.open .qa-answer { display: block; }
+  .qa-item.open .q-arrow { transform: rotate(180deg); }
+  .count { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 1rem; }
+  @media (prefers-color-scheme: dark) {
+    .cat-model { background: #26215C; color: #CECBF6; }
+    .cat-mediapipe { background: #04342C; color: #9FE1CB; }
+    .cat-features { background: #4A1B0C; color: #F5C4B3; }
+    .cat-logic { background: #412402; color: #FAC775; }
+    .cat-arabic { background: #4B1528; color: #F4C0D1; }
+    .cat-general { background: #042C53; color: #B5D4F4; }
+  }
+</style>
+
+<div class="container">
+  <div class="header">
+    <i class="ti ti-hand-stop" style="font-size:22px; color: var(--color-text-secondary);" aria-hidden="true"></i>
+    <h2>أسئلة وأجوبة — كود التعرف على لغة الإشارة</h2>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" onclick="filter('all', this)">الكل</button>
+    <button class="filter-btn" onclick="filter('general', this)">عام</button>
+    <button class="filter-btn" onclick="filter('model', this)">الموديل</button>
+    <button class="filter-btn" onclick="filter('mediapipe', this)">MediaPipe</button>
+    <button class="filter-btn" onclick="filter('features', this)">الميزات</button>
+    <button class="filter-btn" onclick="filter('logic', this)">المنطق</button>
+    <button class="filter-btn" onclick="filter('arabic', this)">العربية</button>
+  </div>
+
+  <p class="count" id="count-label">25 سؤال</p>
+  <div id="qa-list"></div>
+</div>
+
+<script>
+const qaData = [
+  { cat: 'general', q: 'ما الهدف الرئيسي من هذا الكود؟', a: 'الكود يبني نظام تعرف على لغة الإشارة العربية في الوقت الفعلي. يلتقط فيديو من الكاميرا، يستخدم MediaPipe لتحليل حركة اليدين والجسم، ثم يصنف الإشارة بواسطة نموذج SVM ليعرض الكلمة العربية المقابلة على الشاشة.' },
+  { cat: 'general', q: 'ما الملفات الخارجية التي يحتاجها البرنامج؟', a: 'البرنامج يحتاج ثلاثة ملفات: <code>svm_model_pip.pkl</code> (نموذج التصنيف)، <code>scaler_pip.pkl</code> (أداة التطبيع)، و<code>NotoNaskhArabic-Bold.ttf</code> (خط عربي لعرض النصوص). إن غاب أي منها يتوقف البرنامج فوراً.' },
+  { cat: 'general', q: 'كم إشارة يستطيع النظام التعرف عليها؟', a: 'النظام يتعرف على 10 إشارات مختلفة مخزنة في قاموس <code>label_to_arabic</code>: أنا، حب، السلام عليكم، اسمي، كيف الحال، آسف، جامعة، أطفئ الضوء، شغل الضوء 1، شغل الضوء 2.' },
+  { cat: 'general', q: 'كيف يتم تشغيل البرنامج وإيقافه؟', a: 'البرنامج يعمل بتشغيل الملف مباشرة. للإيقاف يُضغط <code>Q</code> على لوحة المفاتيح. لمسح الجملة المتراكمة يُضغط <code>C</code>. كما يمكن إيقافه بـ <code>Ctrl+C</code> من الطرفية.' },
+  { cat: 'general', q: 'ما المكتبات الأساسية المستخدمة في المشروع؟', a: 'المكتبات الأساسية: <code>cv2</code> (OpenCV) لمعالجة الفيديو، <code>mediapipe</code> لتتبع اليدين والجسم، <code>pickle</code> لتحميل النماذج، <code>arabic_reshaper</code> و<code>python-bidi</code> لدعم النص العربي، و<code>PIL</code> لرسم النصوص على الإطارات.' },
+
+  { cat: 'model', q: 'ما نوع نموذج الذكاء الاصطناعي المستخدم؟', a: 'النموذج المستخدم هو SVM (Support Vector Machine) محفوظ في ملف <code>svm_model_pip.pkl</code>. يُحمَّل مع <code>scaler_pip.pkl</code> الذي يطبّع الميزات قبل إدخالها للنموذج. يستخدم النموذج <code>predict_proba()</code> مما يعني أنه مضبوط لإخراج احتمالات.' },
+  { cat: 'model', q: 'ما دور الـ Scaler في الكود؟', a: 'الـ Scaler (عادةً StandardScaler) يحوّل الميزات المستخرجة إلى نطاق موحد قبل تمريرها للنموذج. الأهم أنه يُستخدم بـ <code>scaler.feature_names_in_</code> لضمان أن ترتيب أعمدة البيانات يطابق ما تدرب عليه النموذج.' },
+  { cat: 'model', q: 'ما الحد الأدنى للثقة المطلوب لقبول التنبؤ؟', a: 'الكود يشترط أن تتجاوز نسبة الثقة <code>probability > 0.50</code> (50%) لإضافة التنبؤ إلى سجل التاريخ. هذا يمنع إضافة تنبؤات ضعيفة وغير موثوقة.' },
+  { cat: 'model', q: 'كيف يُحدد النموذج الكلمة المستقرة؟', a: 'يُستخدم نظام التصويت عبر <code>deque(maxlen=5)</code>. عندما يمتلئ السجل بـ 5 تنبؤات، تُحسب أكثرها تكراراً بـ <code>Counter.most_common(1)</code>. إن تكررت الكلمة 4 مرات أو أكثر من أصل 5، تُعتبر مستقرة وتُضاف للجملة.' },
+  { cat: 'model', q: 'لماذا يُفرغ سجل التنبؤات بعد اكتشاف كلمة مستقرة؟', a: 'تفريغ <code>prediction_history.clear()</code> بعد تسجيل كلمة يمنع تكرار نفس الكلمة في الجملة بسبب الإشارات المتبقية. هذا يجعل كل كلمة تُسجَّل مرة واحدة فقط حتى تتغير الإشارة.' },
+
+  { cat: 'mediapipe', q: 'ما الفرق بين Pose وHands في الكود؟', a: '<code>mp_pose.Pose</code> يتتبع هيكل الجسم كله (33 نقطة) ويُستخدم لحساب زوايا الكوع والمسافات النسبية. أما <code>mp_hands.Hands</code> فيتتبع 21 نقطة لكل يد بدقة عالية لتحليل شكل اليد وأصابعها. كلاهما يعمل معاً لاستخراج ميزات شاملة.' },
+  { cat: 'mediapipe', q: 'لماذا يُقلب تصنيف اليد (Left/Right) في الكود؟', a: 'MediaPipe يُسمّي اليدين من منظور الشخص الذي يحمل الكاميرا وليس المستخدم. لأن الصورة ستُقلب لاحقاً بـ <code>cv2.flip(frame, 1)</code>، يعكس الكود التصنيف (Left→Right, Right→Left) لمطابقة يدي المستخدم الحقيقية.' },
+  { cat: 'mediapipe', q: 'ما الحد الأقصى لعدد الأيدي التي يتتبعها النظام؟', a: 'الكود يضبط <code>max_num_hands=2</code>، أي يتتبع يدين كحد أقصى. يدعم النظام كلتا اليدين في وقت واحد لدعم الإشارات التي تتطلب استخدامهما معاً.' },
+  { cat: 'mediapipe', q: 'لماذا يتم تحويل الصورة إلى RGB قبل معالجتها؟', a: 'OpenCV يقرأ الصور بتنسيق BGR بينما MediaPipe يتوقع RGB. لذلك يُحوَّل الإطار بـ <code>cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)</code> قبل المعالجة، ثم تُستخدم النتائج على الإطار الأصلي BGR للعرض.' },
+
+  { cat: 'features', q: 'كم عدد الميزات (Features) التي يستخرجها الكود؟', a: 'الكود يستخرج 4 ميزات هيكلية (زاويتا الكوع + مسافتان للكتف) + (21 نقطة × 2 إحداثي × يدين) = 84 ميزة للأيدي. المجموع الكلي 88 ميزة لكل إطار.' },
+  { cat: 'features', q: 'ما الهدف من تطبيع إحداثيات اليدين؟', a: 'إحداثيات اليدين تُطبَّع بطرح مركز الكتفين وقسمة المسافة بينهما. هذا يجعل الميزات مستقلة عن موقع المستخدم في الإطار وبعده عن الكاميرا، مما يُحسّن دقة التصنيف بشكل كبير.' },
+  { cat: 'features', q: 'كيف تُحسب زاوية الكوع في الكود؟', a: 'تُحسب بدالة <code>calculate_angle(p1, p2, p3)</code> التي تستخدم <code>math.atan2</code> لحساب الزاوية بين ثلاث نقاط: الكتف، الكوع، والرسغ. النتيجة بالدرجات بين 0 و180.' },
+  { cat: 'features', q: 'ماذا يحدث لميزات اليد إذا لم تُكتشف اليد؟', a: 'تُضبط جميع القيم على 0.0 كقيم افتراضية في بداية دالة <code>extract_features()</code>. إن غابت يد، يبقى إطارها من الميزات صفراً مما يُخبر النموذج بغياب تلك اليد.' },
+
+  { cat: 'logic', q: 'ما الذي يحدث عند غياب اليدين عن الكاميرا لفترة؟', a: 'كل إطار بدون يد يزيد عداد <code>frames_without_hand</code>. بعد 10 إطارات متتالية بدون يد، يُعاد ضبط <code>current_stable_word</code> إلى فارغ ويُفرغ سجل التنبؤات. هذا يُنظّف النظام للإشارة التالية.' },
+  { cat: 'logic', q: 'ما الحد الأقصى لعدد كلمات الجملة؟', a: 'الجملة تتسع لـ 10 كلمات كحد أقصى. عند تجاوز ذلك يُحذف <code>sentence.pop(0)</code> أول كلمة، ويعمل النظام كنافذة منزلقة تحتفظ بآخر 10 كلمات.' },
+  { cat: 'logic', q: 'لماذا يستخدم الكود np.ascontiguousarray؟', a: 'بعض عمليات MediaPipe وOpenCV تُنتج مصفوفات numpy غير متجاورة في الذاكرة (non-contiguous). <code>np.ascontiguousarray()</code> يُعيد ترتيبها لضمان توافقها مع دوال OpenCV التالية وتجنب أخطاء التشغيل.' },
+  { cat: 'logic', q: 'لماذا يُقلب الإطار أفقياً في نهاية الحلقة؟', a: 'الكاميرا تلتقط صورة معكوسة مثل المرآة، فتظهر اليد اليمنى على اليسار. <code>cv2.flip(frame, 1)</code> يُصحح هذا ليرى المستخدم صورته الطبيعية. تجدر الإشارة أن التقليب يحدث بعد معالجة MediaPipe لتجنب تأثيره على التصنيف.' },
+  { cat: 'logic', q: 'كيف يتعامل الكود مع أخطاء داخل الحلقة الرئيسية؟', a: 'الحلقة الرئيسية محاطة بـ <code>try/except Exception</code>. أي خطأ يُطبع في الطرفية لكن البرنامج يستمر بدلاً من الانهيار. هذا يجعل النظام متسامحاً مع الأخطاء العابرة في المعالجة.' },
+
+  { cat: 'arabic', q: 'كيف يعرض الكود النص العربي على الفيديو؟', a: 'OpenCV لا يدعم العربية مباشرة. الكود يُحوّل الإطار لصورة PIL، يُعيد تشكيل النص بـ <code>arabic_reshaper</code>، يُطبّق اتجاه النص الصحيح بـ <code>get_display()</code>، يرسمه بخط NotoNaskh، ثم يُعيد التحويل لـ BGR.' },
+  { cat: 'arabic', q: 'ما دور مكتبة arabic_reshaper؟', a: 'العربية لغة تشكيلية — حرف الـ "ب" مثلاً يتغير شكله حسب موقعه في الكلمة. <code>arabic_reshaper</code> يُحوّل النص لحروفه الشكلية الصحيحة قبل الرسم، وإلا ستظهر الحروف منفصلة وغير مترابطة.' },
+  { cat: 'arabic', q: 'لماذا نستخدم get_display من مكتبة bidi؟', a: 'العربية تُكتب من اليمين لليسار (RTL) بينما معظم أنظمة الرسم تتعامل مع النص من اليسار لليمين (LTR). <code>get_display()</code> من مكتبة bidi يُعيد ترتيب الحروف ليُعرض النص بالاتجاه الصحيح.' },
+];
+
+const catLabels = { model: 'الموديل', mediapipe: 'MediaPipe', features: 'الميزات', logic: 'المنطق', arabic: 'العربية', general: 'عام' };
+const catClass = { model: 'cat-model', mediapipe: 'cat-mediapipe', features: 'cat-features', logic: 'cat-logic', arabic: 'cat-arabic', general: 'cat-general' };
+
+let activeFilter = 'all';
+
+function render() {
+  const list = document.getElementById('qa-list');
+  const filtered = activeFilter === 'all' ? qaData : qaData.filter(d => d.cat === activeFilter);
+  document.getElementById('count-label').textContent = filtered.length + ' سؤال';
+  list.innerHTML = filtered.map((item, i) => `
+    <div class="qa-item" id="item-${i}">
+      <div class="qa-question" onclick="toggle(${i})">
+        <i class="ti ti-chevron-down q-arrow" aria-hidden="true"></i>
+        <span class="q-cat ${catClass[item.cat]}">${catLabels[item.cat]}</span>
+        <span class="q-text">${item.q}</span>
+        <span class="q-num">س${i + 1}</span>
+      </div>
+      <div class="qa-answer">${item.a}</div>
+    </div>
+  `).join('');
+}
+
+function toggle(i) {
+  const el = document.getElementById('item-' + i);
+  el.classList.toggle('open');
+}
+
+function filter(cat, btn) {
+  activeFilter = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+render();
+</script>
